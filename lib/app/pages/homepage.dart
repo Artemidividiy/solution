@@ -58,7 +58,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<List<Content>> getContent() async {
-    final client = PocketBase("http://192.168.1.247:8090");
+    final client = PocketBase("http://7pxjgj2fhh.loclx.io");
     final result = await client.records.getList(
       'content',
       page: 1,

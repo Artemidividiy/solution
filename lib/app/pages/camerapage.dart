@@ -1,10 +1,16 @@
+import 'dart:developer';
+import 'dart:io';
+import 'dart:isolate';
+
 import 'package:archive/archive_io.dart';
 import 'package:camera/camera.dart' as camera;
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:pocketbase/pocketbase.dart';
 
 import '../models/content.dart';
+import '../models/user.dart';
 
 class CameraPage extends StatefulWidget {
   final Content content;
@@ -92,20 +98,42 @@ class _CameraPageState extends State<CameraPage> {
   }
 
   void getReaction(BuildContext context) async {
-    await _initDir();
     var req = await http.Client().get(Uri.parse(widget.content.data));
     var archive = ZipDecoder().decodeBytes(req.bodyBytes).first.content;
     var img = Image.memory(archive);
-    Future.wait([_initCamera()]);
+    await Future.wait([_initCamera()]);
+    await _cameraController.prepareForVideoRecording();
+    await _cameraController.startVideoRecording();
     showDialog(
         context: context,
-        builder: (context) => Stack(
-              children: [img],
+        builder: (context) => WillPopScope(
+              onWillPop: () {
+                log("no way outside");
+                return Future.value(false);
+              },
+              child: Column(
+                children: [
+                  Stack(children: [
+                    Container(
+                      constraints: BoxConstraints.loose(Size(400, 400)),
+                      alignment: Alignment.center,
+                      child: ClipRRect(
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(8.0),
+                            topRight: Radius.circular(8.0),
+                            bottomRight: Radius.circular(8.0),
+                            bottomLeft: Radius.circular(8.0),
+                          ),
+                          child: AspectRatio(
+                              aspectRatio: 1,
+                              child: camera.CameraPreview(_cameraController))),
+                    ),
+                    IconButton(onPressed: send, icon: Icon(Icons.send))
+                  ]),
+                  // img,
+                ],
+              ),
             ));
-  }
-
-  Future _initDir() async {
-    dir = (await getApplicationDocumentsDirectory()).path;
   }
 
   Future<void> _initCamera() async {
@@ -115,5 +143,26 @@ class _CameraPageState extends State<CameraPage> {
             element.lensDirection == camera.CameraLensDirection.front),
         camera.ResolutionPreset.max);
     await _cameraController.initialize();
+  }
+
+  void send() async {
+    var video = await _cameraController.stopVideoRecording();
+    File file = File("a");
+    file.writeAsBytes(await video.readAsBytes());
+    var encoded = ZipFileEncoder();
+    var dir = await getApplicationDocumentsDirectory().toString();
+    encoded.create("$dir/tmp.zip");
+    await encoded.addFile(file);
+    encoded.close();
+    var req = http.MultipartRequest("POST", Uri.parse("127.0.0.1:8090"));
+    req.files.add(await http.MultipartFile.fromPath("tmp.zip", dir));
+    req.fields.addAll({
+      'sender': User.id!,
+      'reciever': widget.content.sender,
+      'isReply': 'true',
+      'replyTo': widget.content.dataID
+    });
+    await req.send();
+    await file.delete();
   }
 }

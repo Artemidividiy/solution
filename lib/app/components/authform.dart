@@ -24,16 +24,22 @@ class _AuthFormState extends State<AuthForm> {
         autovalidateMode: AutovalidateMode.onUserInteraction,
         child: Column(
           children: [
-            TextFormField(
-              keyboardType: TextInputType.emailAddress,
-              controller: _emailController,
-              validator: validateEmail,
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: TextFormField(
+                keyboardType: TextInputType.emailAddress,
+                controller: _emailController,
+                validator: validateEmail,
+              ),
             ),
-            TextFormField(
-              keyboardType: TextInputType.emailAddress,
-              controller: _passwordController,
-              validator: validatePassword,
-              obscureText: true,
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: TextFormField(
+                keyboardType: TextInputType.emailAddress,
+                controller: _passwordController,
+                validator: validatePassword,
+                obscureText: true,
+              ),
             ),
             ElevatedButton(onPressed: auth, child: Text("Autenticate"))
           ],
@@ -41,7 +47,7 @@ class _AuthFormState extends State<AuthForm> {
   }
 
   void auth() async {
-    final client = PocketBase("http://192.168.1.247:8090");
+    final client = PocketBase("http://7pxjgj2fhh.loclx.io");
     try {
       UserAuth response = await client.users
           .authViaEmail(_emailController.text, _passwordController.text);
