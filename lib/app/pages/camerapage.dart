@@ -1,29 +1,41 @@
-import 'dart:developer';
+import 'dart:io';
 
+import 'package:archive/archive_io.dart';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
-import 'package:pocketbase/pocketbase.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../models/content.dart';
 
-class CameraPage extends StatelessWidget {
+class CameraPage extends StatefulWidget {
   final Content content;
   const CameraPage({Key? key, required this.content}) : super(key: key);
 
   @override
+  State<CameraPage> createState() => _CameraPageState();
+}
+
+class _CameraPageState extends State<CameraPage> {
+  String? dir;
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          RichText(
-              text: TextSpan(children: [
-            TextSpan(
-                text: "Sender: ",
-                style: TextStyle(
-                    fontWeight: FontWeight.bold, color: Colors.black)),
-            TextSpan(
-                text: content.sender,
-                style: const TextStyle(color: Colors.black)),
-          ])),
+          const Text(
+            "Sender:",
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              // color: Colors.black
+            ),
+          ),
+          Text(
+            widget.content.sender,
+            style: TextStyle(
+                // color: Colors.black
+                ),
+          ),
           ElevatedButton(
               onPressed: () => showModalBottomSheet(
                     context: context,
@@ -41,7 +53,7 @@ class CameraPage extends StatelessWidget {
                             children: [
                               TextButton(
                                 child: Text('Continue'),
-                                onPressed: null,
+                                onPressed: () => getReaction(context),
                               ),
                               TextButton(
                                   onPressed: () => Navigator.pop(context),
@@ -68,11 +80,27 @@ class CameraPage extends StatelessWidget {
                       "Your reaction will be recorded when the image will appear"),
                   TextButton(
                     child: Text('Continue'),
-                    onPressed: null,
+                    onPressed: () => getReaction(context),
                   ),
                   TextButton(onPressed: null, child: Text("Decline"))
                 ],
               ),
             ));
+  }
+
+  void getReaction(BuildContext context) async {
+    await _initDir();
+    var req = await http.Client().get(Uri.parse(widget.content.data));
+    var archive = ZipDecoder().decodeBytes(req.bodyBytes).first.content;
+    var img = Image.memory(archive);
+    showDialog(
+        context: context,
+        builder: (context) => Stack(
+              children: [img],
+            ));
+  }
+
+  Future _initDir() async {
+    dir = (await getApplicationDocumentsDirectory()).path;
   }
 }

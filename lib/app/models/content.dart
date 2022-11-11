@@ -2,16 +2,19 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:archive/archive_io.dart';
+import 'package:pocketbase/pocketbase.dart';
 
 import 'user.dart';
 
 class Content {
-  Uri data;
+  String data;
+  String dataID;
   String sender;
   String reciever;
   bool isReply;
   Content({
     required this.data,
+    required this.dataID,
     required this.sender,
     required this.reciever,
     required this.isReply,
@@ -19,12 +22,14 @@ class Content {
   Content? replyTo;
 
   Content copyWith({
-    Uri? data,
+    String? data,
     String? sender,
     String? reciever,
+    String? dataID,
     bool? isReply,
   }) {
     return Content(
+      dataID: dataID ?? this.dataID,
       data: data ?? this.data,
       sender: sender ?? this.sender,
       reciever: reciever ?? this.reciever,
@@ -70,12 +75,18 @@ class Content {
   factory Content.fromJson(String source) =>
       Content.fromMap(json.decode(source));
 
-  factory Content.fromMap(Map<String, dynamic> map) {
+  factory Content.fromMap(RecordModel map) {
     return Content(
-      data: Uri.parse(map['data']),
-      sender: map['sender'] ?? '',
-      reciever: map['reciever'] ?? '',
-      isReply: map['isReply'] ?? false,
+      dataID: map.id,
+      data: "http://127.0.0.1:8090/api/files/" +
+          map.collectionId.toString() +
+          "/" +
+          map.id +
+          "/" +
+          map.data['data'],
+      sender: map.data['sender'] ?? '',
+      reciever: map.data['reciever'] ?? '',
+      isReply: map.data['isReply'] ?? false,
     );
   }
 }
