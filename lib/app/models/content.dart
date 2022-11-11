@@ -78,7 +78,7 @@ class Content {
   factory Content.fromMap(RecordModel map) {
     return Content(
       dataID: map.id,
-      data: "http://127.0.0.1:8090/api/files/" +
+      data: "http://192.168.1.247:8090/api/files/" +
           map.collectionId.toString() +
           "/" +
           map.id +

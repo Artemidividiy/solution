@@ -1,6 +1,5 @@
-import 'dart:io';
-
 import 'package:archive/archive_io.dart';
+import 'package:camera/camera.dart' as camera;
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
@@ -16,56 +15,60 @@ class CameraPage extends StatefulWidget {
 }
 
 class _CameraPageState extends State<CameraPage> {
+  late camera.CameraController _cameraController;
   String? dir;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            "Sender:",
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              // color: Colors.black
-            ),
-          ),
-          Text(
-            widget.content.sender,
-            style: TextStyle(
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Sender:",
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
                 // color: Colors.black
-                ),
-          ),
-          ElevatedButton(
-              onPressed: () => showModalBottomSheet(
-                    context: context,
-                    builder: (context) => (Container(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Text(
-                                "Your reaction will be recorded when the image will appear"),
-                          ),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
-                            children: [
-                              TextButton(
-                                child: Text('Continue'),
-                                onPressed: () => getReaction(context),
-                              ),
-                              TextButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  child: Text("Decline"))
-                            ],
-                          ),
-                        ],
-                      ),
-                    )),
+              ),
+            ),
+            Text(
+              widget.content.sender,
+              style: TextStyle(
+                  // color: Colors.black
                   ),
-              child: Text("reply"))
-        ],
+            ),
+            ElevatedButton(
+                onPressed: () => showModalBottomSheet(
+                      context: context,
+                      builder: (context) => (Container(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Text(
+                                  "Your reaction will be recorded when the image will appear"),
+                            ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceAround,
+                              children: [
+                                TextButton(
+                                  child: Text('Continue'),
+                                  onPressed: () => getReaction(context),
+                                ),
+                                TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: Text("Decline"))
+                              ],
+                            ),
+                          ],
+                        ),
+                      )),
+                    ),
+                child: Text("reply"))
+          ],
+        ),
       ),
     );
   }
@@ -93,6 +96,7 @@ class _CameraPageState extends State<CameraPage> {
     var req = await http.Client().get(Uri.parse(widget.content.data));
     var archive = ZipDecoder().decodeBytes(req.bodyBytes).first.content;
     var img = Image.memory(archive);
+    Future.wait([_initCamera()]);
     showDialog(
         context: context,
         builder: (context) => Stack(
@@ -102,5 +106,14 @@ class _CameraPageState extends State<CameraPage> {
 
   Future _initDir() async {
     dir = (await getApplicationDocumentsDirectory()).path;
+  }
+
+  Future<void> _initCamera() async {
+    final cameras = await camera.availableCameras();
+    _cameraController = camera.CameraController(
+        cameras.firstWhere((element) =>
+            element.lensDirection == camera.CameraLensDirection.front),
+        camera.ResolutionPreset.max);
+    await _cameraController.initialize();
   }
 }

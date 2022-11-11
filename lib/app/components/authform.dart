@@ -25,10 +25,12 @@ class _AuthFormState extends State<AuthForm> {
         child: Column(
           children: [
             TextFormField(
+              keyboardType: TextInputType.emailAddress,
               controller: _emailController,
               validator: validateEmail,
             ),
             TextFormField(
+              keyboardType: TextInputType.emailAddress,
               controller: _passwordController,
               validator: validatePassword,
               obscureText: true,
@@ -39,7 +41,7 @@ class _AuthFormState extends State<AuthForm> {
   }
 
   void auth() async {
-    final client = PocketBase("http://127.0.0.1:8090");
+    final client = PocketBase("http://192.168.1.247:8090");
     try {
       UserAuth response = await client.users
           .authViaEmail(_emailController.text, _passwordController.text);

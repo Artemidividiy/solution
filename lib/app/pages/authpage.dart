@@ -23,6 +23,7 @@ class _AuthPageState extends State<AuthPage> {
     return Scaffold(
       body: Center(
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             type == FormType.auth ? AuthForm() : RegisterForm(),
             TextButton(

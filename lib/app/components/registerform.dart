@@ -25,10 +25,12 @@ class _MyWidgetState extends State<RegisterForm> {
         child: Column(
           children: [
             TextFormField(
+              keyboardType: TextInputType.emailAddress,
               controller: _emailController,
               validator: _emailValidator,
             ),
             TextFormField(
+              keyboardType: TextInputType.emailAddress,
               controller: _passwordController,
               validator: _passwordValidator,
             ),
@@ -50,7 +52,7 @@ class _MyWidgetState extends State<RegisterForm> {
   }
 
   Future<bool> checkAvailable(String value) async {
-    var client = PocketBase("http://127.0.0.1:8090");
+    var client = PocketBase("http://192.168.1.247:8090");
     await client.admins
         .authViaEmail('artemiy.kasyanik@gmail.com', 'adminadmin');
 
@@ -66,7 +68,7 @@ class _MyWidgetState extends State<RegisterForm> {
   }
 
   void register() async {
-    final client = PocketBase("http://127.0.0.1:8090");
+    final client = PocketBase("http://192.168.1.247:8090");
     try {
       final user = await client.users.create(body: {
         'email': _emailController.text,
