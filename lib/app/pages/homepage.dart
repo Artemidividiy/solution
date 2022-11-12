@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
-
+import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 import 'package:pocketbase/pocketbase.dart';
+import 'package:solution/app/components/userTile.dart';
 import '../components/requestwidget.dart';
 import 'package:solution/app/pages/authpage.dart';
 
@@ -30,35 +33,56 @@ class _HomePageState extends State<HomePage> {
               })),
       body: Column(
         children: [
-          Text("some value"),
-          FutureBuilder<List<Content>>(
-            future: getContent(),
-            builder: (context, snapshot) {
-              if (snapshot.hasData &&
-                  snapshot.connectionState == ConnectionState.done) {
-                snapshot.data!
-                    .removeWhere((element) => element.reciever != User.id);
-                return Expanded(
-                  child: ListView(
-                    children: List.generate(snapshot.data!.length,
-                        (index) => RequestWidget(data: snapshot.data![index])),
-                  ),
-                );
-              }
-              return CircularProgressIndicator();
-            },
-          )
+          Text("drag to refresh"),
+          Expanded(
+            child: RefreshIndicator(
+                onRefresh: getContent,
+                child: FutureBuilder<List<Content>>(
+                  future: getContent(),
+                  builder: (context, snapshot) {
+                    if (snapshot.hasData &&
+                        snapshot.connectionState == ConnectionState.done) {
+                      snapshot.data!.removeWhere(
+                          (element) => element.reciever != User.id);
+                      return Expanded(
+                        child: ListView(children: [
+                          Text("Notifications"),
+                          Column(
+                              children:
+                                  List.generate(snapshot.data!.length, (index) {
+                            if (snapshot.data![index].sender != User.id!)
+                              return RequestWidget(data: snapshot.data![index]);
+                            return Container();
+                          })),
+                          Divider(),
+                          Text("Your requests"),
+                          Column(
+                            children:
+                                List.generate(snapshot.data!.length, (index) {
+                              if (snapshot.data![index].sender == User.id!)
+                                return RequestWidget(
+                                    data: snapshot.data![index]);
+                              return Container();
+                            }),
+                          )
+                        ]),
+                      );
+                    }
+                    return CircularProgressIndicator();
+                  },
+                )),
+          ),
         ],
       ),
       floatingActionButton: ElevatedButton(
-        onPressed: null,
+        onPressed: send,
         child: Text("send"),
       ),
     );
   }
 
   Future<List<Content>> getContent() async {
-    final client = PocketBase("http://7pxjgj2fhh.loclx.io");
+    final client = PocketBase("http://pelerin-solutions.ru:10011");
     final result = await client.records.getList(
       'content',
       page: 1,
@@ -67,5 +91,42 @@ class _HomePageState extends State<HomePage> {
     );
     return List.generate(
         result.totalItems, (index) => Content.fromMap(result.items[index]));
+  }
+
+  send() async {
+    final ImagePicker picker = ImagePicker();
+    XFile? img = await picker.pickImage(source: ImageSource.camera);
+    if (img != null) {
+      showModalBottomSheet(
+          context: context,
+          builder: (context) {
+            return Container(
+              child: FutureBuilder<Widget>(
+                future: getUsers(img),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.done) {
+                    return snapshot.data!;
+                  }
+                  return CircularProgressIndicator();
+                },
+              ),
+            );
+          });
+    }
+  }
+
+  Future<Widget> getUsers(XFile img) async {
+    final client = PocketBase("http://pelerin-solutions.ru:10011");
+    await client.admins
+        .authViaEmail('artemiy.kasyanik@gmail.com', 'hajta4-dakDif-fezkud');
+    List<UserModel> users = await client.users.getFullList();
+    List<Widget> data = [Text("Pick reciever")];
+
+    data.addAll(List.generate(
+        users.length, (index) => UserTile(user: users[index], img: img)));
+
+    return Column(
+      children: data,
+    );
   }
 }

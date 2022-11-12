@@ -78,7 +78,7 @@ class Content {
   factory Content.fromMap(RecordModel map) {
     return Content(
       dataID: map.id,
-      data: "http://7pxjgj2fhh.loclx.io/api/files/" +
+      data: "http://pelerin-solutions.ru:10011/api/files/" +
           map.collectionId.toString() +
           "/" +
           map.id +

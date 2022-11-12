@@ -8,9 +8,13 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pocketbase/pocketbase.dart';
+import 'package:solution/app/pages/homepage.dart';
+import 'package:video_player/video_player.dart';
 
 import '../models/content.dart';
 import '../models/user.dart';
+
+enum ContentType { Image, Video }
 
 class CameraPage extends StatefulWidget {
   final Content content;
@@ -22,10 +26,12 @@ class CameraPage extends StatefulWidget {
 
 class _CameraPageState extends State<CameraPage> {
   late camera.CameraController _cameraController;
+  late Size size;
   String? dir;
 
   @override
   Widget build(BuildContext context) {
+    size = MediaQuery.of(context).size;
     return Scaffold(
       body: SafeArea(
         child: Column(
@@ -40,40 +46,92 @@ class _CameraPageState extends State<CameraPage> {
             ),
             Text(
               widget.content.sender,
-              style: TextStyle(
+              style: const TextStyle(
                   // color: Colors.black
                   ),
             ),
-            ElevatedButton(
-                onPressed: () => showModalBottomSheet(
-                      context: context,
-                      builder: (context) => (Container(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Text(
-                                  "Your reaction will be recorded when the image will appear"),
-                            ),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceAround,
-                              children: [
-                                TextButton(
-                                  child: Text('Continue'),
-                                  onPressed: () => getReaction(context),
+            widget.content.sender == User.id!
+                ? FutureBuilder<Widget>(
+                    future: showData(ContentType.Image),
+                    builder: (context, snapshot) => snapshot.connectionState ==
+                            ConnectionState.done
+                        ? LimitedBox(
+                            maxHeight: MediaQuery.of(context).size.height * 0.7,
+                            maxWidth: MediaQuery.of(context).size.height * 0.7,
+                            child: snapshot.data!)
+                        : const CircularProgressIndicator(),
+                  )
+                : widget.content.isReply
+                    ? FutureBuilder<Widget>(
+                        future: showData(ContentType.Video),
+                        builder: (context, snapshot) {
+                          return snapshot.connectionState ==
+                                  ConnectionState.done
+                              ? snapshot.data!
+                              : const CircularProgressIndicator();
+                        },
+                      )
+                    : ElevatedButton(
+                        onPressed: () => showModalBottomSheet(
+                              context: context,
+                              builder: (context) => (Container(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Padding(
+                                      padding: EdgeInsets.all(8.0),
+                                      child: const Text(
+                                          "Your reaction will be recorded when the image will appear"),
+                                    ),
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceAround,
+                                      children: [
+                                        TextButton(
+                                          child: const Text('Continue'),
+                                          onPressed: () => getReaction(context),
+                                        ),
+                                        TextButton(
+                                            onPressed: () =>
+                                                Navigator.pop(context),
+                                            child: const Text("Decline"))
+                                      ],
+                                    ),
+                                  ],
                                 ),
-                                TextButton(
-                                    onPressed: () => Navigator.pop(context),
-                                    child: Text("Decline"))
-                              ],
+                              )),
                             ),
-                          ],
-                        ),
-                      )),
-                    ),
-                child: Text("reply"))
+                        child: const Text("reply"))
           ],
+        ),
+      ),
+    );
+  }
+
+  Future<Widget> showData(ContentType ct) async {
+    if (ct == ContentType.Image) {
+      var req = await http.Client().get(Uri.parse(widget.content.data));
+      var archive = ZipDecoder().decodeBytes(req.bodyBytes).first.content;
+      return Image.memory(archive);
+    }
+    var _dir = await getApplicationDocumentsDirectory();
+    var req = await http.Client().get(Uri.parse(widget.content.data));
+    ArchiveFile archive = ZipDecoder().decodeBytes(req.bodyBytes).first;
+    File f = File('${_dir.path}/tmp.mp4');
+    f.writeAsBytesSync(archive.content);
+    VideoPlayerController videoPlayerController = VideoPlayerController.file(f);
+    await videoPlayerController.initialize();
+    await videoPlayerController.setLooping(true);
+    await videoPlayerController.play();
+    f.delete();
+    return ClipRRect(
+      child: Container(
+        constraints: BoxConstraints.loose(size * 0.8),
+        child: Transform.scale(
+          scale: videoPlayerController.value.aspectRatio / size.aspectRatio,
+          child: Center(
+              child: AspectRatio(
+                  aspectRatio: 0.5, child: VideoPlayer(videoPlayerController))),
         ),
       ),
     );
@@ -85,55 +143,54 @@ class _CameraPageState extends State<CameraPage> {
         builder: (context) => Container(
               child: Column(
                 children: [
-                  Text(
+                  const Text(
                       "Your reaction will be recorded when the image will appear"),
                   TextButton(
-                    child: Text('Continue'),
+                    child: const Text('Continue'),
                     onPressed: () => getReaction(context),
                   ),
-                  TextButton(onPressed: null, child: Text("Decline"))
+                  const TextButton(onPressed: null, child: Text("Decline"))
                 ],
               ),
             ));
   }
 
   void getReaction(BuildContext context) async {
-    var req = await http.Client().get(Uri.parse(widget.content.data));
-    var archive = ZipDecoder().decodeBytes(req.bodyBytes).first.content;
-    var img = Image.memory(archive);
+    log("continue button pressed");
+    var img = showData(ContentType.Image);
     await Future.wait([_initCamera()]);
     await _cameraController.prepareForVideoRecording();
     await _cameraController.startVideoRecording();
     showDialog(
-        context: context,
-        builder: (context) => WillPopScope(
-              onWillPop: () {
-                log("no way outside");
-                return Future.value(false);
-              },
-              child: Column(
-                children: [
-                  Stack(children: [
-                    Container(
-                      constraints: BoxConstraints.loose(Size(400, 400)),
-                      alignment: Alignment.center,
-                      child: ClipRRect(
-                          borderRadius: BorderRadius.only(
-                            topLeft: Radius.circular(8.0),
-                            topRight: Radius.circular(8.0),
-                            bottomRight: Radius.circular(8.0),
-                            bottomLeft: Radius.circular(8.0),
-                          ),
-                          child: AspectRatio(
-                              aspectRatio: 1,
-                              child: camera.CameraPreview(_cameraController))),
-                    ),
-                    IconButton(onPressed: send, icon: Icon(Icons.send))
-                  ]),
-                  // img,
-                ],
+      context: context,
+      builder: (context) => Scaffold(
+        body: Column(children: [
+          ClipRRect(
+            child: Container(
+              child: Transform.scale(
+                scale: _cameraController.value.aspectRatio / size.aspectRatio,
+                child: Center(
+                  child: AspectRatio(
+                      aspectRatio: _cameraController.value.aspectRatio,
+                      child: camera.CameraPreview(_cameraController)),
+                ),
               ),
-            ));
+            ),
+          ),
+          FutureBuilder<Widget>(
+            future: showData(ContentType.Image),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.done)
+                return snapshot.data!;
+              return const CircularProgressIndicator();
+            },
+          ),
+        ]),
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+        floatingActionButton:
+            IconButton(onPressed: send, icon: const Icon(Icons.send)),
+      ),
+    );
   }
 
   Future<void> _initCamera() async {
@@ -143,26 +200,37 @@ class _CameraPageState extends State<CameraPage> {
             element.lensDirection == camera.CameraLensDirection.front),
         camera.ResolutionPreset.max);
     await _cameraController.initialize();
+    log("camera initialized");
   }
 
   void send() async {
     var video = await _cameraController.stopVideoRecording();
-    File file = File("a");
-    file.writeAsBytes(await video.readAsBytes());
+    log("stopped recording");
     var encoded = ZipFileEncoder();
-    var dir = await getApplicationDocumentsDirectory().toString();
-    encoded.create("$dir/tmp.zip");
+    var dir = (await getApplicationDocumentsDirectory());
+    encoded.create("${dir.path}/tmp.zip");
+    File file = File("${dir.path}/a.mp4");
+    await file.writeAsBytes(await video.readAsBytes());
     await encoded.addFile(file);
+    log("encoded");
     encoded.close();
-    var req = http.MultipartRequest("POST", Uri.parse("127.0.0.1:8090"));
-    req.files.add(await http.MultipartFile.fromPath("tmp.zip", dir));
-    req.fields.addAll({
+    log("sending");
+    final client = PocketBase("http://pelerin-solutions.ru:10011");
+    final record = await client.records.create('content', body: {
       'sender': User.id!,
       'reciever': widget.content.sender,
       'isReply': 'true',
       'replyTo': widget.content.dataID
-    });
-    await req.send();
+    }, files: [
+      await http.MultipartFile.fromPath(
+        "data",
+        dir.path + "/tmp.zip",
+      )
+    ]);
     await file.delete();
+    log("sent");
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (context) => const HomePage(),
+    ));
   }
 }

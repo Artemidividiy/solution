@@ -52,7 +52,7 @@ class _MyWidgetState extends State<RegisterForm> {
   }
 
   Future<bool> checkAvailable(String value) async {
-    var client = PocketBase("http://7pxjgj2fhh.loclx.io");
+    var client = PocketBase("http://pelerin-solutions.ru:10011");
     await client.admins
         .authViaEmail('artemiy.kasyanik@gmail.com', 'adminadmin');
 
@@ -68,7 +68,7 @@ class _MyWidgetState extends State<RegisterForm> {
   }
 
   void register() async {
-    final client = PocketBase("http://7pxjgj2fhh.loclx.io");
+    final client = PocketBase("http://pelerin-solutions.ru:10011");
     try {
       final user = await client.users.create(body: {
         'email': _emailController.text,

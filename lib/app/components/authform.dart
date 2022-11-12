@@ -47,7 +47,7 @@ class _AuthFormState extends State<AuthForm> {
   }
 
   void auth() async {
-    final client = PocketBase("http://7pxjgj2fhh.loclx.io");
+    final client = PocketBase("http://pelerin-solutions.ru:10011");
     try {
       UserAuth response = await client.users
           .authViaEmail(_emailController.text, _passwordController.text);
