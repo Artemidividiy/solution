@@ -74,18 +74,20 @@ class _UserTileState extends State<UserTile> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-        onTap: () => pushToServer(),
-        child: Container(
-            constraints: BoxConstraints(minHeight: 45),
-            child: Flex(direction: Axis.horizontal, children: [
-              Flexible(
-                child: AnimatedContainer(
-                  duration: Duration(milliseconds: 250),
-                  child: isSent ? Icon(Icons.check) : null,
-                ),
-              ),
-              Flexible(flex: 6, child: Text(widget.user.email)),
-            ])));
+    return widget.user.email != User.email
+        ? GestureDetector(
+            onTap: () => pushToServer(),
+            child: Container(
+                constraints: BoxConstraints(minHeight: 45),
+                child: Flex(direction: Axis.horizontal, children: [
+                  Flexible(
+                    child: AnimatedContainer(
+                      duration: Duration(milliseconds: 250),
+                      child: isSent ? Icon(Icons.check) : null,
+                    ),
+                  ),
+                  Flexible(flex: 6, child: Text(widget.user.email)),
+                ])))
+        : Container();
   }
 }

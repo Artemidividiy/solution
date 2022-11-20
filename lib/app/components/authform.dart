@@ -27,6 +27,7 @@ class _AuthFormState extends State<AuthForm> {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8.0),
               child: TextFormField(
+                decoration: InputDecoration(labelText: "email"),
                 keyboardType: TextInputType.emailAddress,
                 controller: _emailController,
                 validator: validateEmail,
@@ -35,7 +36,7 @@ class _AuthFormState extends State<AuthForm> {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8.0),
               child: TextFormField(
-                keyboardType: TextInputType.emailAddress,
+                decoration: InputDecoration(labelText: "password"),
                 controller: _passwordController,
                 validator: validatePassword,
                 obscureText: true,
@@ -61,7 +62,10 @@ class _AuthFormState extends State<AuthForm> {
           builder: (context) => HomePage(),
         ));
     } catch (e) {
-      log("🍑");
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          behavior: SnackBarBehavior.floating,
+          content: Text("wrong user data")));
+      log("🍑", error: e);
     }
   }
 
@@ -71,5 +75,6 @@ class _AuthFormState extends State<AuthForm> {
 
   String? validateEmail(String? value) {
     if (value == null || value.isEmpty) return "cannot be empty";
+    if (!value.contains("@")) return "not an email";
   }
 }
