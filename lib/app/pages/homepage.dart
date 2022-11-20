@@ -44,8 +44,9 @@ class _HomePageState extends State<HomePage> {
                         snapshot.connectionState == ConnectionState.done) {
                       snapshot.data!.removeWhere(
                           (element) => element.reciever != User.id);
-                      return Expanded(
-                        child: ListView(children: [
+                      return ListView(
+                        shrinkWrap: true,
+                        children: [
                           Text("Notifications"),
                           Column(
                               children:
@@ -65,7 +66,7 @@ class _HomePageState extends State<HomePage> {
                               return Container();
                             }),
                           )
-                        ]),
+                        ],
                       );
                     }
                     return CircularProgressIndicator();

@@ -23,7 +23,7 @@ class UserTile extends StatefulWidget {
 
 class _UserTileState extends State<UserTile> {
   bool isSent = false;
-
+  bool isSending = false;
   pushToServer() async {
     log("encoding");
     var encoded = ZipFileEncoder();
@@ -34,6 +34,9 @@ class _UserTileState extends State<UserTile> {
     await encoded.addFile(file);
     encoded.close();
     log("sending");
+    setState(() {
+      isSending = true;
+    });
     // var req = http.MultipartRequest(
     //     "POST", Uri.parse("http://pelerin-solutions.ru:10011"))
     //   ..headers.addAll({'content-type': 'multipart/form-data'});
@@ -65,6 +68,7 @@ class _UserTileState extends State<UserTile> {
       log("sent");
       setState(() {
         isSent = true;
+        isSending = false;
       });
     } catch (e) {
       log("pushToServer() error: ", error: e);
@@ -83,7 +87,11 @@ class _UserTileState extends State<UserTile> {
                   Flexible(
                     child: AnimatedContainer(
                       duration: Duration(milliseconds: 250),
-                      child: isSent ? Icon(Icons.check) : null,
+                      child: !isSending
+                          ? CircularProgressIndicator()
+                          : isSent
+                              ? Icon(Icons.check)
+                              : null,
                     ),
                   ),
                   Flexible(flex: 6, child: Text(widget.user.email)),
